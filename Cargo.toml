@@ -1,0 +1,49 @@
+[workspace]
+members = [
+    "crates/castsol/", "crates/common",
+]
+
+resolver = "2"
+
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.79"
+authors = ["galois"]
+homepage = "https://github.com/JamieShip/foundry-solana"
+repository = "https://github.com/JamieShip/foundry-solana"
+exclude = ["benches/", "tests/", "test-data/", "testdata/"]
+
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+strip = true
+panic = "abort"
+codegen-units = 1
+
+[profile.release.package]
+mdbook.opt-level = 1
+protobuf.opt-level = 1
+rusoto_core.opt-level = 1
+rusoto_credential.opt-level = 1
+rusoto_kms.opt-level = 1
+toml_edit.opt-level = 1
+trezor-client.opt-level = 1
+
+[workspace.dependencies]
+castsol = { path = "crates/castsol"}
+common ={ path = "crates/common" }
+tokio = { version = "1.39.2", features = ["full", "macros", "signal"] }
+eyre = {version = "0.6.11"}
+clap = { version = "4", features = ["derive", "env", "unicode", "wrap_help"] }
+solana-sdk = "2.0.3"
+tracing = "0.1.40"
+yansi = "1.0.1"
+color-eyre = "0.6.3"
+tracing-subscriber = "0.3.18"
+solana-client = "2.0.5"
+solana-transaction-status = "2.0.5"
+bs58 = "0.5.1"

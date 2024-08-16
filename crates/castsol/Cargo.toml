@@ -1,0 +1,33 @@
+[package]
+name = "castsol"
+description = "Command-line tool for performing Solana RPC calls"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+
+[[bin]]
+name = "castsol"
+path = "bin/main.rs"
+
+[build-dependencies]
+vergen = { version = "8", default-features = false, features = ["build", "git", "git2"] }
+
+[dependencies]
+tokio = { workspace = true, features = ["full", "macros", "signal"] }
+eyre = {workspace = true}
+clap = { workspace = true, features = ["derive", "env", "unicode", "wrap_help"] }
+solana-sdk = {workspace = true}
+tracing = {workspace = true}
+yansi = {workspace = true}
+color-eyre = {workspace = true}
+common ={ workspace = true }
+
+
+
+

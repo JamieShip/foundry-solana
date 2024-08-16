@@ -1,0 +1,21 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+eyre = {workspace = true}
+tracing = {workspace = true}
+yansi = {workspace = true}
+color-eyre = {workspace = true}
+tracing-subscriber = {workspace = true}
+solana-client = {workspace = true}
+solana-sdk = {workspace = true}
+solana-transaction-status = {workspace = true}
+bs58 = {workspace = true}
