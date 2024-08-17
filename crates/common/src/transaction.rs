@@ -114,7 +114,7 @@ fn parse_instructions(
             pretty.push_str("\ninput accounts:");
             for idx in 0..account_length {
                 pretty.push_str(
-                    format!("\n[{:0>account_str_length$}] - {}", idx, accounts[idx].to_string())
+                    format!("\n[{:0>account_str_length$}] - {}", idx, accounts[instruction.accounts[idx] as usize])
                         .as_str(),
                 )
             }
@@ -127,12 +127,12 @@ fn parse_instructions(
             let mut sub_instruction_idx = 1;
             for instruction in instructions {
                 if let UiInstruction::Compiled(compiled_ins) = instruction {
-                    if stack.len() == 0 {
+                    if stack.is_empty() {
                         stack.push(compiled_ins);
                         continue;
                     }
                     // compare stack height, push instruction into the stack if stack height is greater than the one in the top of the stack
-                    let top = stack.get(stack.len() - 1).unwrap();
+                    let top = stack.last().unwrap();
                     match (top.stack_height, compiled_ins.stack_height) {
                         (Some(top_stack_height), Some(cur_stack_height)) => {
                             if cur_stack_height > top_stack_height {
@@ -141,16 +141,16 @@ fn parse_instructions(
                             }
 
                             let mut inner_calls = vec![];
-                            while stack.len() > 0 {
+                            while !stack.is_empty() {
                                 inner_calls.push(stack.pop());
                             }
 
                             if !inner_calls.is_empty() {
                                 let pretty_inner_calls_res = pretty_inner_calls(inner_calls, accounts, instruction_id, sub_instruction_idx);
                                 pretty.push_str(
-                                    &pretty_inner_calls_res.as_str()
+                                    pretty_inner_calls_res.as_str()
                                 );
-                                sub_instruction_idx = sub_instruction_idx + 1;
+                                sub_instruction_idx += 1;
                             }
 
                             stack.push(compiled_ins);
@@ -161,14 +161,14 @@ fn parse_instructions(
             }
 
             let mut inner_calls = vec![];
-            while stack.len() > 0 {
+            while !stack.is_empty() {
                 inner_calls.push(stack.pop());
             }
 
             if !inner_calls.is_empty() {
                 let pretty_inner_calls_res = pretty_inner_calls(inner_calls, accounts, instruction_id, sub_instruction_idx);
                 pretty.push_str(
-                    &pretty_inner_calls_res.as_str()
+                    pretty_inner_calls_res.as_str()
                 );
                 // sub_instruction_idx = sub_instruction_idx + 1;
             }
@@ -187,8 +187,9 @@ fn pretty_inner_calls(
 ) -> String {
     let mut tab_count = 1;
     let mut pretty = "".to_string();
-    for call in inner_calls.iter().rev() {
-        if let Some(inner_ins) = call {
+    for call in inner_calls.iter().rev().flatten() {
+        let inner_ins = call;
+        
             pretty.push_str(
                 with_tab_space_prefix_ln(tab_count, format!("#{}.{}", instruction_id, sub_idx))
                     .as_str(),
@@ -202,7 +203,7 @@ fn pretty_inner_calls(
             );
             if !inner_ins.accounts.is_empty() {
                 pretty.push_str(
-                    with_tab_space_prefix_ln(tab_count, format!("input accounts:")).as_str(),
+                    with_tab_space_prefix_ln(tab_count, "input accounts:".to_string()).as_str(),
                 )
             }
             for sub_idx in 0..inner_ins.accounts.len() {
@@ -217,8 +218,8 @@ fn pretty_inner_calls(
 
             pretty.push_str(with_tab_space_prefix_ln(tab_count, format!("instruction data: {}", inner_ins.data)).as_str());
 
-            tab_count = tab_count + 1;
-        }
+            tab_count += 1;
+        
     }
     pretty
 }
