@@ -55,7 +55,7 @@ fee:                    {}",
                 pretty.push_str(
                     format!(
                         "
-compute Units Consumed: {}",
+compute units consumed: {}",
                         tx_meta.compute_units_consumed.map_or(0, |c| c)
                     )
                     .as_str(),
@@ -94,7 +94,7 @@ fn parse_instructions(
         }
     }
 
-    let mut pretty: String = "Instructions details:".to_string();
+    let mut pretty: String = "\nInstructions details:".to_string();
     for instruction_idx in 0..instructions.len() {
         let instruction_id = instruction_idx + 1;
         let instruction = &instructions[instruction_idx];
