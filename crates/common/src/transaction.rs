@@ -4,7 +4,10 @@ use eyre::Context;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcTransactionConfig;
 use solana_sdk::{
-    commitment_config::{CommitmentConfig, CommitmentLevel}, instruction::CompiledInstruction, pubkey::Pubkey, signature::Signature
+    commitment_config::{CommitmentConfig, CommitmentLevel},
+    instruction::CompiledInstruction,
+    pubkey::Pubkey,
+    signature::Signature,
 };
 use solana_transaction_status::{
     option_serializer::OptionSerializer, UiCompiledInstruction, UiInnerInstructions, UiInstruction,
@@ -40,7 +43,7 @@ impl TransactionHandler {
 tx signautre:           {}
 tx status:              {}
                 ",
-                    signature.to_string(),
+                    signature,
                     tx_meta.err.map_or("Success".to_string(), |e| e.to_string())
                 );
                 let accounts = version_tx.message.static_account_keys();
@@ -103,8 +106,7 @@ fn parse_instructions(
         }
         let program_id = instruction.program_id(accounts);
         pretty.push_str(
-            format!("\n#{} - interact with program id: {}", instruction_id, program_id.to_string())
-                .as_str(),
+            format!("\n#{} - interact with program id: {}", instruction_id, program_id).as_str(),
         );
 
         let account_length = instruction.accounts.len();
@@ -114,13 +116,19 @@ fn parse_instructions(
             pretty.push_str("\ninput accounts:");
             for idx in 0..account_length {
                 pretty.push_str(
-                    format!("\n[{:0>account_str_length$}] - {}", idx, accounts[instruction.accounts[idx] as usize])
-                        .as_str(),
+                    format!(
+                        "\n[{:0>account_str_length$}] - {}",
+                        idx, accounts[instruction.accounts[idx] as usize]
+                    )
+                    .as_str(),
                 )
             }
         }
 
-        pretty.push_str(format!("\ninstruction data: {}", bs58::encode(instruction.data.clone()).into_string()).as_str());
+        pretty.push_str(
+            format!("\ninstruction data: {}", bs58::encode(instruction.data.clone()).into_string())
+                .as_str(),
+        );
 
         if let Some(instructions) = inner_instruction_map.get(&(instruction_idx as u8)) {
             let mut stack = vec![];
@@ -133,29 +141,31 @@ fn parse_instructions(
                     }
                     // compare stack height, push instruction into the stack if stack height is greater than the one in the top of the stack
                     let top = stack.last().unwrap();
-                    match (top.stack_height, compiled_ins.stack_height) {
-                        (Some(top_stack_height), Some(cur_stack_height)) => {
-                            if cur_stack_height > top_stack_height {
-                                stack.push(compiled_ins);
-                                continue;
-                            }
-
-                            let mut inner_calls = vec![];
-                            while !stack.is_empty() {
-                                inner_calls.push(stack.pop());
-                            }
-
-                            if !inner_calls.is_empty() {
-                                let pretty_inner_calls_res = pretty_inner_calls(inner_calls, accounts, instruction_id, sub_instruction_idx);
-                                pretty.push_str(
-                                    pretty_inner_calls_res.as_str()
-                                );
-                                sub_instruction_idx += 1;
-                            }
-
+                    if let (Some(top_stack_height), Some(cur_stack_height)) =
+                        (top.stack_height, compiled_ins.stack_height)
+                    {
+                        if cur_stack_height > top_stack_height {
                             stack.push(compiled_ins);
+                            continue;
                         }
-                        (_, _) => {}
+
+                        let mut inner_calls = vec![];
+                        while !stack.is_empty() {
+                            inner_calls.push(stack.pop());
+                        }
+
+                        if !inner_calls.is_empty() {
+                            let pretty_inner_calls_res = pretty_inner_calls(
+                                inner_calls,
+                                accounts,
+                                instruction_id,
+                                sub_instruction_idx,
+                            );
+                            pretty.push_str(pretty_inner_calls_res.as_str());
+                            sub_instruction_idx += 1;
+                        }
+
+                        stack.push(compiled_ins);
                     }
                 }
             }
@@ -166,10 +176,9 @@ fn parse_instructions(
             }
 
             if !inner_calls.is_empty() {
-                let pretty_inner_calls_res = pretty_inner_calls(inner_calls, accounts, instruction_id, sub_instruction_idx);
-                pretty.push_str(
-                    pretty_inner_calls_res.as_str()
-                );
+                let pretty_inner_calls_res =
+                    pretty_inner_calls(inner_calls, accounts, instruction_id, sub_instruction_idx);
+                pretty.push_str(pretty_inner_calls_res.as_str());
                 // sub_instruction_idx = sub_instruction_idx + 1;
             }
         }
@@ -177,7 +186,6 @@ fn parse_instructions(
 
     eyre::Ok(pretty)
 }
-
 
 fn pretty_inner_calls(
     inner_calls: Vec<Option<&UiCompiledInstruction>>,
@@ -189,37 +197,39 @@ fn pretty_inner_calls(
     let mut pretty = "".to_string();
     for call in inner_calls.iter().rev().flatten() {
         let inner_ins = call;
-        
+
+        pretty.push_str(
+            with_tab_space_prefix_ln(tab_count, format!("#{}.{}", instruction_id, sub_idx))
+                .as_str(),
+        );
+        pretty.push_str(
+            with_tab_space_prefix_ln(
+                tab_count,
+                format!("interact with: {}", accounts[inner_ins.program_id_index as usize]),
+            )
+            .as_str(),
+        );
+        if !inner_ins.accounts.is_empty() {
             pretty.push_str(
-                with_tab_space_prefix_ln(tab_count, format!("#{}.{}", instruction_id, sub_idx))
-                    .as_str(),
-            );
+                with_tab_space_prefix_ln(tab_count, "input accounts:".to_string()).as_str(),
+            )
+        }
+        for sub_idx in 0..inner_ins.accounts.len() {
             pretty.push_str(
                 with_tab_space_prefix_ln(
                     tab_count,
-                    format!("interact with: {}", accounts[inner_ins.program_id_index as usize]),
+                    format!("[{}] - {}", sub_idx, accounts[inner_ins.accounts[sub_idx] as usize]),
                 )
                 .as_str(),
             );
-            if !inner_ins.accounts.is_empty() {
-                pretty.push_str(
-                    with_tab_space_prefix_ln(tab_count, "input accounts:".to_string()).as_str(),
-                )
-            }
-            for sub_idx in 0..inner_ins.accounts.len() {
-                pretty.push_str(
-                    with_tab_space_prefix_ln(
-                        tab_count,
-                        format!("[{}] - {}", sub_idx, accounts[inner_ins.accounts[sub_idx] as usize]),
-                    )
-                    .as_str(),
-                );
-            }
+        }
 
-            pretty.push_str(with_tab_space_prefix_ln(tab_count, format!("instruction data: {}", inner_ins.data)).as_str());
+        pretty.push_str(
+            with_tab_space_prefix_ln(tab_count, format!("instruction data: {}", inner_ins.data))
+                .as_str(),
+        );
 
-            tab_count += 1;
-        
+        tab_count += 1;
     }
     pretty
 }
