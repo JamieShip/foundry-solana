@@ -15,8 +15,12 @@ async fn main() -> Result<()> {
     let castsol_cmd = CastSol::parse();
 
     match castsol_cmd.cmd {
-        opts::CastSubCommand::Tx { tx_signature, rpc } => TransactionHandler::new(rpc.url.unwrap())
-            .handle_tx(&Signature::from_str(tx_signature.as_str()).unwrap())?,
+        opts::CastSubCommand::Tx { tx_signature, rpc, with_balance_changes } => {
+            TransactionHandler::new(rpc.url.unwrap()).handle_tx(
+                &Signature::from_str(tx_signature.as_str()).unwrap(),
+                with_balance_changes.unwrap_or(false),
+            )?
+        }
     }
 
     Ok(())

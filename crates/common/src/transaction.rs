@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use eyre::Context;
 use solana_client::rpc_client::RpcClient;
@@ -9,10 +9,11 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::Signature,
 };
-use solana_transaction_status::{
-    option_serializer::OptionSerializer, UiCompiledInstruction, UiInnerInstructions, UiInstruction,
-    UiTransactionEncoding,
-};
+use solana_transaction_status::option_serializer::OptionSerializer;
+use solana_transaction_status::UiCompiledInstruction;
+use solana_transaction_status::UiInnerInstructions;
+use solana_transaction_status::UiInstruction;
+use solana_transaction_status::UiTransactionEncoding;
 
 pub struct TransactionHandler {
     pub client: RpcClient,
@@ -23,7 +24,7 @@ impl TransactionHandler {
         Self { client: RpcClient::new(rpc_url) }
     }
 
-    pub fn handle_tx(&self, signature: &Signature) -> eyre::Result<()> {
+    pub fn handle_tx(&self, signature: &Signature, with_balance_changes: bool) -> eyre::Result<()> {
         let tx = self
             .client
             .get_transaction_with_config(
@@ -73,7 +74,45 @@ compute units consumed: {}",
                     .as_str(),
                 );
 
-                print!("{}", pretty);
+                print!("{}\n\n", pretty);
+
+                if with_balance_changes {
+                    println!("Account Sol Balance Changes\n");
+                    println!("{:<50} {:<50} {:<50}", "Account", "Before", "After");
+                    for i in 0..tx_meta.pre_balances.len() {
+                        println!(
+                            "{:<50} {:<50} {:<50}",
+                            accounts[i].to_string(),
+                            (tx_meta.pre_balances[i] as f64) / 10_f64.powi(9),
+                            (tx_meta.post_balances[i] as f64) / 10_f64.powi(9)
+                        );
+                    }
+
+                    match (tx_meta.pre_token_balances, tx_meta.post_token_balances) {
+                        (
+                            OptionSerializer::Some(pre_token_changes),
+                            OptionSerializer::Some(post_balance_changes),
+                        ) => {
+                            println!("");
+                            println!("Token Balance Changes\n");
+                            println!(
+                                "{:<45} {:<45} {:<45} {:<30} {:<30}",
+                                "Account", "Owner", "Token",  "Before", "After"
+                            );
+                            for i in 0..pre_token_changes.len() {
+                                println!(
+                                    "{:<45} {:<45} {:<45} {:<30} {:<30}",
+                                    accounts[pre_token_changes[i].account_index as usize],
+                                    pre_token_changes[i].owner.clone().unwrap_or("None".to_string()),
+                                    pre_token_changes[i].mint,
+                                    pre_token_changes[i].ui_token_amount.ui_amount_string,
+                                    post_balance_changes[i].ui_token_amount.ui_amount_string
+                                );
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
             _ => {
                 println!("invalid tx!")

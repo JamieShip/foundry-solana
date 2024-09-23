@@ -29,6 +29,9 @@ pub enum CastSubCommand {
         tx_signature: String,
         #[command(flatten)]
         rpc: RpcOpts,
+
+        #[arg(short = 'w', long = "with-balance-changes")]
+        with_balance_changes: Option<bool>,
     },
 }
 
